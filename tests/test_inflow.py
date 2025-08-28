@@ -25,6 +25,25 @@ def test_ticker_reader_init():
         assert ticker_reader.symbols == ['AAPL', 'MSFT', 'GOOGL', 'TSLA']
         assert ticker_reader.kafka_producer == mock_producer
         
-
+def test_message_handler():
+    """
+    Tests the message_handler method of the TickerReader class.
+    """
+    mock_producer = Mock(spec=KafkaProducerWrapper)
     
+    # Mock file content for tickers.txt
+    mock_file_content = "AAPL\nMSFT\nGOOGL\nTSLA\n"
+    
+    with patch('src.data.inflow.inflow.yf.Tickers') as mock_tickers, \
+         patch('builtins.open', mock_open(read_data=mock_file_content)):
+        test_message = {
+            "symbol": "AAPL",
+            "price": 150.0,
+            "volume": 1000
+        }
+        ticker_reader = TickerReader(kafka_producer=mock_producer)
 
+        ticker_reader.message_handler(test_message)
+
+        # Assert that the message was sent to the Kafka topic
+        mock_producer.send.assert_called_once_with(test_message)
