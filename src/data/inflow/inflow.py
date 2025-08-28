@@ -13,6 +13,10 @@ from tenacity import retry, stop_after_attempt, wait_fixed
 
 from datetime import datetime
 
+from dotenv import load_dotenv
+import os
+load_dotenv()
+
 import logging
 
 logging.basicConfig(level=logging.INFO)
@@ -31,8 +35,11 @@ class TickerReader:
     Reads stock ticker data from yfinance live streams.
     Provides recovery from the last read timestamp should errors occur
     """
-    def __init__(self, kafka_producer: KafkaProducerWrapper):
-        self.kafka_producer = kafka_producer
+    def __init__(self, kafka_producer: Optional[KafkaProducerWrapper] = None):
+        if kafka_producer is None:
+            self.kafka_producer = KafkaProducerWrapper(topic=os.getenv("KAFKA_TOPIC"))
+        else:
+            self.kafka_producer = kafka_producer
         self.symbols = self._get_tickers()
         self.tickers = yf.Tickers(self.symbols)
         self.last_read = {symbol: TickStatus(symbol) for symbol in self.symbols}
