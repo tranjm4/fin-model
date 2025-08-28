@@ -3,21 +3,38 @@ services:
   f-kafka:
     container_name: f-kafka
     image: apache/kafka:4.0.0
+    volumes:
+      - f-kafka-data:/var/lib/kafka/data
     ports:
       - "9001:9001"
     environment:
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller
-      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@f-kafka:9093
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
       KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9001,CONTROLLER://0.0.0.0:9093
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9001
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://f-kafka:9001
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_CLUSTER_ID: test-cluster-id
     healthcheck:
-      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9001"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      test: ["CMD", "/opt/kafka/bin/kafka-topics.sh", "--bootstrap-server", "localhost:9001", "--list"]
+      interval: 15s
+      timeout: 10s
+      retries: 2
+    networks:
+      - f-net
+
+  f-kafka-init:
+    container_name: f-kafka-init
+    image: apache/kafka:4.0.0
+    depends_on:
+      f-kafka:
+        condition: service_healthy
+    command: >
+      sh -c "
+        /opt/kafka/bin/kafka-topics.sh --create --if-not-exists --topic yf-stream --bootstrap-server f-kafka:9001 --partitions 4 --replication-factor 1
+        echo 'Topics created successfully'
+      "
     networks:
       - f-net
 
@@ -25,13 +42,13 @@ services:
     container_name: f-pg
     image: postgres:17
     ports:
-      - "6543:6543"
+      - "6543:5432"
     environment:
       POSTGRES_USER: user
       POSTGRES_PASSWORD: password
-      POSTGRES_DB: db
+      POSTGRES_DB: finance
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - f-pgdata:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U user"]
       interval: 10s
@@ -43,22 +60,32 @@ services:
   data-in:
     container_name: f-in
     build:
-      context: ./src/data
-      dockerfile: ./dockerfiles/Dockerfile.fin
+      context: ./src
+      dockerfile: ./data/dockerfiles/Dockerfile.fin
+    depends_on:
+      f-kafka:
+        condition: service_healthy
+    env_file:
+      - ./src/data/.env
     networks:
       - f-net
 
   data-out:
     container_name: f-out
     build:
-      context: ./src/data
-      dockerfile: ./dockerfiles/Dockerfile.fout
+      context: ./src
+      dockerfile: ./data/dockerfiles/Dockerfile.fout
+    env_file:
+      - ./src/data/.env
     networks:
       - f-net
       - f-data
 
 volumes:
-  pgdata:
+  f-pgdata:
+    driver: local
+  f-kafka-data:
+    driver: local
 
 networks:
   f-net:
