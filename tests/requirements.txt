@@ -3,4 +3,4 @@ kafka-python==2.2.15
 python-dotenv==1.1.1
 yfinance==0.2.65
 tenacity
-pytest-mock
+pytest==8.4.1
