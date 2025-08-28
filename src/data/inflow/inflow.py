@@ -60,13 +60,19 @@ class TickerReader:
         """Handles incoming messages from the yfinance API.
         """
         # Update the last read timestamp
-        symbol = message.get('symbol')
+        symbol = message.get('id')
         self.last_read[symbol].last_read = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        logger.info(f"Received message for {symbol} at {self.last_read[symbol].last_read}")
         self.kafka_producer.send(message)
 
     def _get_tickers(self, file_name: str = "tickers.txt") -> List[str]:
         """Retrieves a predefined set of tickers to track from tickers.txt
         """
+        # If using default filename, look in the same directory as this module
+        if file_name == "tickers.txt":
+            import os
+            file_name = os.path.join(os.path.dirname(__file__), "tickers.txt")
+        
         tickers = []
         with open(file_name, "r") as f:
             tickers = [line.strip() for line in f.readlines()]
@@ -86,11 +92,11 @@ class TickerReader:
         Uses current time as the end time for the query.
         """
         try:
-            current_time = datetime.now()
+            current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             with open("recovery.txt", "r") as f:
                 last_read = f.read().strip()
             logger.info(f"Recovering tickers from last read: {last_read}")
             # Query yfinance for the lost data
-            self.tickers.history(period="1s", start=last_read)
+            self.tickers.history(period="1s", start=last_read, end=current_time)
         except Exception as e:
             logger.error(f"Error recovering tickers: {e}")
