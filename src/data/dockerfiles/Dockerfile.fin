@@ -1,0 +1,18 @@
+FROM python:3.13
+
+WORKDIR /app
+ENV PYTHONPATH="/app:$PYTHONPATH"
+
+COPY ./requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy the inflow module
+COPY ./inflow ./src/data/inflow
+# Copy the mq module
+COPY ./mq ./src/data/mq
+# Copy the script
+COPY ../scripts/run_inflow.py ./src/scripts
+
+RUN touch ./src/__init__.py ./src/data/__init__.py
+
+CMD ["python", "-m", "src.scripts.run_inflow"]
