@@ -1,0 +1,65 @@
+services:
+
+  kafka:
+    container_name: f-kafka
+    image: apache/kafka:4.0.0
+    ports:
+      - "9001:9001"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9001,CONTROLLER://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9001
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+    healthcheck:
+      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9001"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - f-net
+
+  f-pg:
+    container_name: f-pg
+    image: postgres:17
+    ports:
+      - "6543:6543"
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: db
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - f-data
+
+  data-in:
+    container_name: f-in
+    build:
+      context: ./src/data
+      dockerfile: ./dockerfiles/Dockerfile.fin
+    networks:
+      - f-net
+
+  data-out:
+    container_name: f-out
+    build:
+      context: ./src/data
+      dockerfile: ./dockerfiles/Dockerfile.fout
+    networks:
+      - f-net
+      - f-data
+
+volumes:
+  pgdata:
+
+networks:
+  f-net:
+  f-data:
