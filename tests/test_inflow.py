@@ -37,9 +37,14 @@ def test_message_handler():
     with patch('src.data.inflow.inflow.yf.Tickers') as mock_tickers, \
          patch('builtins.open', mock_open(read_data=mock_file_content)):
         test_message = {
-            "symbol": "AAPL",
-            "price": 150.0,
-            "volume": 1000
+            'id': 'AAPL',
+            'price': 230.9968,
+            'time': '1756386138000',
+            'exchange': 'NMS',
+            'quote_type': 8,
+            'change_percent': 0.21987511,
+            'change': 0.50679016,
+            'price_hint': '2'
         }
         ticker_reader = TickerReader(kafka_producer=mock_producer)
 
