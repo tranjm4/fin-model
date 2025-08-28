@@ -61,7 +61,8 @@ class TickerReader:
         """
         # Update the last read timestamp
         symbol = message.get('symbol')
-        self.kafka_producer.send_message("finance.tickers", message)
+        self.last_read[symbol].last_read = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        self.kafka_producer.send(message)
 
     def _get_tickers(self, file_name: str = "tickers.txt") -> List[str]:
         """Retrieves a predefined set of tickers to track from tickers.txt
@@ -90,6 +91,6 @@ class TickerReader:
                 last_read = f.read().strip()
             logger.info(f"Recovering tickers from last read: {last_read}")
             # Query yfinance for the lost data
-            self.tickers.history(period="1d", start=last_read)
+            self.tickers.history(period="1s", start=last_read)
         except Exception as e:
             logger.error(f"Error recovering tickers: {e}")
