@@ -11,7 +11,7 @@ from typing import List, Any, Dict, Optional
 
 from dotenv import load_dotenv
 import os
-load_dotenv(".env.kafka")
+load_dotenv(".env")
 
 class KafkaProducerWrapper(KafkaProducer):
     """
